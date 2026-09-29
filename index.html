@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tutti Frutti</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#2a1b4a;--paper:#fffdf7;--ok:#16803c;--h:48;--bg:hsl(var(--h) 88% 66%)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:500 17px/1.4 "Fredoka","Trebuchet MS",system-ui,sans-serif;transition:background .5s;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+main{max-width:480px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:36px;line-height:1;margin:6px 0 6px;font-weight:700;letter-spacing:-.5px}
+.mut{font-size:15px;opacity:.8}
+.ctr{text-align:center}
+.card{background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:14px;margin:14px 0;box-shadow:5px 5px 0 var(--ink)}
+input,select{width:100%;font:inherit;padding:11px 12px;border-radius:12px;border:2.5px solid var(--ink);background:#fff;color:var(--ink);margin:4px 0 10px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+button{font:inherit;font-weight:700;padding:13px 16px;border-radius:14px;border:3px solid var(--ink);background:var(--ink);color:#fff;width:100%;margin:8px 0 4px;box-shadow:0 5px 0 rgba(42,27,74,.35);cursor:pointer;transition:transform .08s,box-shadow .08s}
+button:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(42,27,74,.35)}
+button.alt{background:var(--paper);color:var(--ink)}
+button.basta{background:#e11d48;font-size:26px;padding:16px;margin-top:14px}
+button:disabled{opacity:.5}
+.letter{width:150px;height:150px;margin:10px auto 8px;display:grid;place-items:center;background:var(--paper);color:hsl(var(--h) 85% 40%);border:4px solid var(--ink);border-radius:28px;box-shadow:6px 6px 0 var(--ink);font-size:104px;font-weight:700;line-height:1;transform:rotate(-4deg);animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:rotate(-14deg) scale(.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.letter{animation:none}body{transition:none}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--paper);border:2.5px solid var(--ink);border-radius:99px;padding:3px 11px;font-size:15px;font-weight:600}
+.row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1.5px dashed rgba(42,27,74,.25)}
+.row:last-child{border-bottom:0}
+.pts{font-weight:700;color:var(--ok)}.pts.z{color:#8b7fa3}
+.banner{background:#ffe14d;border:3px solid var(--ink);border-radius:16px;padding:10px;text-align:center;font-weight:700;margin:12px 0;box-shadow:4px 4px 0 var(--ink)}
+label{display:block;font-size:15px;font-weight:600}
+.pill{display:table;margin:4px auto 10px;background:var(--paper);border:2.5px solid var(--ink);border-radius:99px;padding:2px 14px;font-weight:700}
+.room{display:inline-block;background:var(--paper);border:2.5px solid var(--ink);border-radius:99px;padding:2px 14px;margin:0 0 10px}
+.room b{letter-spacing:1px}
+.hide{display:none}
+</style></head>
+<body><main>
+<h1>🍉 Tutti Frutti</h1>
+<div id="join">
+  <p class="mut">El juego de palabras para jugar con amigos, cada uno desde su teléfono.</p>
+  <div class="card">
+    <label>Tu nombre</label><input id="nm" maxlength="16" autocomplete="off">
+    <label>Código de sala</label><input id="cd" maxlength="12" autocomplete="off" autocapitalize="none" placeholder="ej: abcd">
+    <button id="enter">Entrar a la sala</button>
+    <button id="create" class="alt">Crear sala nueva</button>
+    <div id="err" class="mut"></div>
+  </div>
+  <p class="mut">Uno crea la sala y les pasa el código a los demás.</p>
+</div>
+<div id="game" class="hide">
+  <div class="room">Sala <b id="code"></b></div>
+  <div id="players" class="chips" style="margin:8px 0"></div>
+  <div id="msg"></div>
+  <div id="main"></div>
+</div>
+</main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyDNcYs0Liq5owyN71l-J5yxYNEupNaN_vU",
+  authDomain:"juego-73eec.firebaseapp.com",
+  databaseURL:"https://juego-73eec-default-rtdb.firebaseio.com",
+  projectId:"juego-73eec",
+  storageBucket:"juego-73eec.firebasestorage.app",
+  messagingSenderId:"1036415896248",
+  appId:"1:1036415896248:web:a602680fafa74725b1024d"
+};
+const CATS=["Nombre","Apellido","Ciudad","País","Animal","Color","Cosa"];
+const ICONS=["🧑","👥","🏙️","🌎","🐾","🎨","📦"];
+const LETTERS="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const $=s=>document.querySelector(s);
+const norm=s=>String(s||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+let db,ref,me,myId,myName="",myAns=[],data=null;
+let lastL="",jtSet=false,claiming=false,roundSeen={},lastN=0,sig="",bastaSeen={},banked=0,bankedN=0,flushedN=0,timer,deb;
+try{$("#nm").value=localStorage.getItem("tf-name")||"";myId=localStorage.getItem("tf-id")}catch(e){}
+if(!myId){myId=Math.random().toString(36).slice(2,12);try{localStorage.setItem("tf-id",myId)}catch(e){}}
+
+function go(code){
+  myName=$("#nm").value.trim().slice(0,16);
+  code=code.toLowerCase().replace(/[^a-z0-9]/g,"");
+  if(!myName){$("#err").textContent="Poné tu nombre.";return}
+  if(!code){$("#err").textContent="Poné un código de sala.";return}
+  try{localStorage.setItem("tf-name",myName)}catch(e){}
+  if(typeof firebase==="undefined"){$("#err").textContent="No cargó Firebase. Revisá tu conexión.";return}
+  if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+  db=firebase.database();
+  ref=db.ref("rooms/"+code);
+  me=ref.child("players/"+myId);
+  $("#err").textContent="Conectando…";
+  ref.child("players/"+myId).once("value").then(snap=>{
+    const old=snap.val()||{};
+    banked=old.tot||0;bankedN=old.tn||0;
+    db.ref(".info/connected").on("value",s=>{
+      if(s.val()===true){me.onDisconnect().update({on:false});const u={name:myName,on:true};if(!old.jt&&!jtSet){u.jt=firebase.database.ServerValue.TIMESTAMP;jtSet=true}me.update(u)}
+    });
+    $("#join").classList.add("hide");$("#game").classList.remove("hide");
+    $("#code").textContent=code;
+    ref.on("value",s=>{data=s.val();update()});setInterval(tick,500);
+  }).catch(e=>{$("#err").textContent="Error de conexión: "+(e&&e.code||e)});
+}
+$("#enter").onclick=()=>go($("#cd").value);
+$("#create").onclick=()=>{const c=Math.random().toString(36).slice(2,6);$("#cd").value=c;go(c)};
+
+function state(){
+  const d=data||{},pl=d.players||{};
+  const ps=Object.keys(pl).filter(k=>pl[k].on&&pl[k].name)
+    .map(k=>Object.assign({id:k,me:k===myId},pl[k]));
+  const cur=d.rd||null;
+  const b=cur&&d.bs&&d.bs.n===cur.n?d.bs:null;
+  let phase="lobby";
+  if(cur){phase="play";
+    if(b){if(!bastaSeen[cur.n])bastaSeen[cur.n]=Date.now();
+      phase=Date.now()-bastaSeen[cur.n]<2500?"closing":"reveal"}}
+  return{ps,cur,b,phase};
+}
+
+function score(s){
+  const L=norm(s.cur.letter),res={};
+  const ans=p=>p.a&&p.a.n===s.cur.n&&p.a.v?p.a.v:[];
+  CATS.forEach((c,i)=>{
+    const cnt=Object.create(null);
+    s.ps.forEach(p=>{const t=norm(ans(p)[i]);if(t.length>1&&t[0]===L)cnt[t]=(cnt[t]||0)+1});
+    s.ps.forEach(p=>{
+      const raw=String(ans(p)[i]||"").trim(),t=norm(raw),ok=t.length>1&&t[0]===L;
+      (res[p.id]=res[p.id]||{pts:0,c:[]}).c[i]={raw,pts:ok?(cnt[t]>1?5:10):0};
+    });
+  });
+  for(const k in res)res[k].pts=res[k].c.reduce((a,x)=>a+x.pts,0);
+  return res;
+}
+
+const clean=()=>CATS.map((_,i)=>String(myAns[i]||""));
+const sendAns=n=>me.child("a").set({n,v:clean()});
+
+function tick(){
+  const c=data&&data.rd;
+  if(!c||!c.dur||(data.bs&&data.bs.n===c.n))return;
+  const left=c.dur-Math.floor((Date.now()-(roundSeen[c.n]||Date.now()))/1000);
+  const t=$("#tm");if(t)t.textContent="⏱ "+Math.max(left,0)+" s";
+  if(left<=0)ref.child("bs").transaction(x=>(x&&x.n===c.n)?undefined:{n:c.n,t:1});
+}
+
+function update(){
+  const s=state(),d=data||{};
+  document.documentElement.style.setProperty("--h",s.cur?Math.round(LETTERS.indexOf(s.cur.letter)*13.8):48);
+  const pl=$("#players");pl.textContent="";
+  pl.classList.toggle("hide",s.phase==="lobby");
+  s.ps.forEach(p=>pl.appendChild(el("span","chip",(d.host===p.id?"👑 ":"")+(p.me?"Vos":p.name)+": "+(p.tot||0)+" pts")));
+  // anfitrión: si no hay o está desconectado, lo toma el que entró primero
+  const hostOn=d.host&&s.ps.some(p=>p.id===d.host);
+  if(!hostOn&&s.ps.length&&!claiming){
+    const first=s.ps.slice().sort((a,b)=>(a.jt||0)-(b.jt||0))[0];
+    if(first.me){claiming=true;const seen=d.host||null;
+      ref.child("host").transaction(c=>(c||null)===seen?myId:undefined).then(()=>{claiming=false},()=>{claiming=false})}
+  }
+  if(!s.cur){lastN=0;lastL="";flushedN=0;bastaSeen={};roundSeen={};
+    const mp=(d.players||{})[myId]||{};banked=mp.tot||0;bankedN=mp.tn||0}
+  if(s.cur&&!roundSeen[s.cur.n])roundSeen[s.cur.n]=Date.now();
+  if(s.cur&&(s.cur.n!==lastN||s.cur.letter!==lastL)){lastN=s.cur.n;lastL=s.cur.letter;myAns=[];sendAns(lastN)}
+  clearTimeout(timer);
+  const msg=$("#msg");msg.textContent="";
+  if(s.phase==="closing"){
+    msg.appendChild(el("div","banner",s.b.t?"¡Se acabó el tiempo!":"¡BASTA! "+s.b.name+" terminó. Cerrando…"));
+    if(flushedN!==s.cur.n){flushedN=s.cur.n;sendAns(s.cur.n)}
+    document.querySelectorAll("#main input,#main button").forEach(e=>e.disabled=true);
+    timer=setTimeout(update,2600-(Date.now()-bastaSeen[s.cur.n])+60);
+  }
+  const key=s.phase==="lobby"?"l":s.phase==="reveal"?"r"+Date.now():"p"+(s.cur&&(s.cur.n+s.cur.letter));
+  if(key!==sig){
+    sig=key;
+    const m=$("#main");m.textContent="";
+    if(s.phase==="lobby")buildLobby(m);
+    else if(s.phase==="reveal")buildReveal(m,s);
+    else buildPlay(m,s);
+  }
+  if(s.phase==="lobby")refreshLobby(s);
+}
+
+function startRound(prev){
+  if(!prev&&(data||{}).host!==myId)return;
+  const c=(data&&data.cfg)||{};
+  const pn=prev?prev.n:0;
+  let used=prev?(prev.used||prev.letter):"";
+  let pool=LETTERS.split("").filter(x=>!used.includes(x));
+  if(!pool.length){pool=LETTERS.split("");used=""}
+  const l=pool[Math.random()*pool.length|0];
+  used+=l;
+  ref.child("rd").transaction(cur=>{
+    if((cur?cur.n:0)!==pn)return;
+    return{n:pn+1,letter:l,used:used,dur:c.dur||0,total:c.total||5};
+  });
+}
+
+function changeLetter(){
+  const cur=data&&data.rd;if(!cur||cur.ch)return;
+  if(!confirm("¿Cambiar la letra para todos? Solo se puede una vez por ronda y se borran las respuestas."))return;
+  ref.child("rd").transaction(c=>{
+    if(!c||c.n!==cur.n||c.ch)return;
+    const used=c.used||c.letter;
+    let pool=LETTERS.split("").filter(x=>!used.includes(x));
+    if(!pool.length)pool=LETTERS.split("").filter(x=>x!==c.letter);
+    const l=pool[Math.random()*pool.length|0];
+    return Object.assign({},c,{letter:l,used:used+l,ch:1});
+  });
+}
+
+function resetGame(){
+  const u={rd:null,bs:null};
+  Object.keys((data||{}).players||{}).forEach(k=>{u["players/"+k+"/tot"]=0;u["players/"+k+"/tn"]=0;u["players/"+k+"/a"]=null});
+  ref.update(u);
+}
+
+function setCfg(){ref.child("cfg").update({total:+$("#st").value,dur:+$("#sd").value})}
+
+function buildLobby(m){
+  m.innerHTML='<div class="card"><b>Jugadores (<span id="mcount">1</span>)</b><div id="mem"></div>'+
+   '<button id="shr" class="alt">Compartir código</button></div>'+
+   '<div id="hostbox" class="card hide"><b>Sos el anfitrión 👑</b><br><label>Rondas</label>'+
+   '<select id="st"><option>3</option><option>5</option><option>8</option><option>10</option></select>'+
+   '<label>Tiempo por ronda</label><select id="sd"><option value="0">Sin límite</option><option value="60">60 s</option><option value="90">90 s</option><option value="120">120 s</option></select>'+
+   '<button id="go">Empezar partida</button></div>'+
+   '<div id="guestbox" class="card hide"><p>Esperando a que <b id="hn"></b> inicie la partida…</p><div class="mut" id="cfgtxt"></div></div>';
+  $("#st").onchange=setCfg;$("#sd").onchange=setCfg;
+  $("#go").onclick=()=>startRound(null);
+  $("#shr").onclick=()=>{
+    const t="Jugá Tutti Frutti conmigo. Código de sala: "+$("#code").textContent;
+    if(navigator.share)navigator.share({text:t,url:location.href}).catch(()=>{});
+    else if(navigator.clipboard)navigator.clipboard.writeText(t+" "+location.href).then(()=>{$("#shr").textContent="¡Copiado!"});
+  };
+}
+
+function refreshLobby(s){
+  const d=data||{},cfg=d.cfg||{};
+  const mem=$("#mem");if(!mem)return;
+  mem.textContent="";
+  s.ps.slice().sort((a,b)=>(a.jt||0)-(b.jt||0)).forEach(p=>{
+    const r=el("div","row");
+    r.appendChild(el("span",null,(d.host===p.id?"👑 ":"")+p.name+(p.me?" (vos)":"")));
+    mem.appendChild(r);
+  });
+  $("#mcount").textContent=s.ps.length;
+  const host=d.host===myId;
+  $("#hostbox").classList.toggle("hide",!host);
+  $("#guestbox").classList.toggle("hide",host);
+  const hn=s.ps.find(p=>p.id===d.host);
+  $("#hn").textContent=hn?hn.name:"el anfitrión";
+  $("#cfgtxt").textContent="Rondas: "+(cfg.total||5)+" · Tiempo: "+(cfg.dur?cfg.dur+" s":"sin límite");
+  if(document.activeElement!==$("#st"))$("#st").value=String(cfg.total||5);
+  if(document.activeElement!==$("#sd"))$("#sd").value=String(cfg.dur||0);
+}
+
+function buildPlay(m,s){
+  const n=s.cur.n;
+  m.appendChild(el("div","mut ctr","Ronda "+n+" de "+(s.cur.total||"?")+": palabras con la letra"));
+  m.appendChild(el("div","letter",s.cur.letter));
+  if(s.cur.dur){const t=el("div","pill","");t.id="tm";m.appendChild(t)}
+  if(!s.cur.ch){const cb=el("button","alt","Cambiar letra");cb.style.cssText="width:auto;margin:0 auto 6px;display:block;padding:6px 16px;font-size:15px";cb.onclick=changeLetter;m.appendChild(cb)}
+  const c=el("div","card");
+  CATS.forEach((cat,i)=>{
+    c.appendChild(el("label",null,ICONS[i]+" "+cat));
+    const inp=el("input");inp.maxLength=30;inp.autocomplete="off";
+    inp.value=myAns[i]||"";
+    inp.oninput=()=>{myAns[i]=inp.value;clearTimeout(deb);deb=setTimeout(()=>sendAns(n),300)};
+    c.appendChild(inp);
+  });
+  const b=el("button","basta","¡BASTA!"),err=el("div","mut ctr");
+  b.onclick=()=>{
+    if(!CATS.every((_,i)=>norm(myAns[i]).length>0)){err.textContent="Completá todas las categorías para decir basta.";return}
+    sendAns(n);
+    ref.child("bs").transaction(cur=>(cur&&cur.n===n)?undefined:{n,name:myName});
+  };
+  c.appendChild(b);c.appendChild(err);m.appendChild(c);
+}
+
+function buildReveal(m,s){
+  const res=score(s);
+  const mine=res[myId];
+  if(mine&&bankedN!==s.cur.n){
+    bankedN=s.cur.n;banked+=mine.pts;me.update({tot:banked,tn:bankedN});
+  }
+  m.appendChild(el("div","mut","Ronda "+s.cur.n+" · letra "+s.cur.letter));
+  CATS.forEach((cat,i)=>{
+    const c=el("div","card");c.appendChild(el("b",null,ICONS[i]+" "+cat));
+    s.ps.forEach(p=>{
+      const x=res[p.id]&&res[p.id].c[i]||{raw:"",pts:0};
+      const r=el("div","row");
+      r.appendChild(el("span",null,(p.me?"Vos":p.name)+": "+(x.raw||"—")));
+      r.appendChild(el("span","pts"+(x.pts?"":" z"),"+"+x.pts));
+      c.appendChild(r);
+    });
+    m.appendChild(c);
+  });
+  const t=el("div","card");t.appendChild(el("b",null,"Puntaje total"));
+  s.ps.map(p=>({n:p.me?"Vos":p.name,t:p.me?banked:(p.tot||0)}))
+    .sort((a,b)=>b.t-a.t).forEach(x=>{
+      const r=el("div","row");r.appendChild(el("span",null,x.n));
+      r.appendChild(el("span","pts",x.t+" pts"));t.appendChild(r)});
+  m.appendChild(t);
+  const last=s.cur.total&&s.cur.n>=s.cur.total;
+  if(last){
+    const w=s.ps.map(p=>({n:p.me?"Vos":p.name,t:p.me?banked:(p.tot||0)})).sort((a,b)=>b.t-a.t)[0];
+    if(w){const c=el("div","banner","🏆 Ganó "+w.n+" con "+w.t+" pts");m.appendChild(c)}
+  }
+  const b=el("button",null,last?"Volver a la sala":"Siguiente ronda");
+  b.onclick=()=>last?resetGame():startRound(s.cur);
+  m.appendChild(b);
+}
+</script></body></html>
