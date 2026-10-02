@@ -128,6 +128,14 @@ main{max-width:560px;padding:26px 18px 52px}
 h1{font-size:clamp(38px,10vw,52px);letter-spacing:-1.5px;text-shadow:3px 3px 0 rgba(255,255,255,.5);margin:10px 0 8px}
 .mut{color:var(--ink-soft);font-weight:500}
 #join>p:first-of-type{font-size:18px;line-height:1.35;max-width:390px;margin:0 auto 20px}
+#join{position:relative}
+#join .card{position:relative;overflow:hidden;padding:24px 20px 20px;background:linear-gradient(180deg,rgba(255,253,248,.98),rgba(255,248,236,.96))}
+#join .card:before{content:"🍉  🍓  🍍";display:block;text-align:center;font-size:25px;letter-spacing:5px;margin:-4px 0 12px;filter:drop-shadow(2px 3px 0 rgba(36,20,63,.12))}
+#join .card:after{content:"";position:absolute;width:110px;height:110px;right:-50px;bottom:-52px;border-radius:50%;background:#ff5c78;opacity:.18}
+#join #enter{background:linear-gradient(135deg,#e11d48,#bf1241);border-color:#8f1033;box-shadow:0 6px 0 #8f1033;font-size:18px}
+#join #create{background:#fff;color:var(--ink);border-color:var(--ink);box-shadow:0 5px 0 rgba(36,20,63,.14)}
+#join #err{min-height:21px;margin-top:8px;font-weight:600}
+.welcome-badge{display:table;margin:0 auto 12px;background:rgba(255,253,248,.86);border:2px solid var(--ink);border-radius:999px;padding:5px 13px;font-weight:700;box-shadow:0 4px 0 rgba(36,20,63,.12)}
 #join:before{content:"🍓  🍉  🍍";display:block;text-align:center;font-size:28px;letter-spacing:7px;margin:4px 0 2px;filter:drop-shadow(2px 3px 0 rgba(36,20,63,.14))}
 .card,.tblw{
   background:rgba(255,253,248,.94);
@@ -217,6 +225,7 @@ body:has(#join:not(.hide)):after{animation:welcomeGlow 9s 1s ease-in-out infinit
 <body><main>
 <h1>🍉 Tutti Frutti</h1>
 <div id="join">
+  <div class="welcome-badge">🍓 Listo para jugar 🍍</div>
   <p class="mut">El juego de palabras para jugar con amigos, cada uno desde su teléfono.</p>
   <div class="card">
     <label>Tu nombre</label><input id="nm" maxlength="16" autocomplete="off">
@@ -251,7 +260,7 @@ const firebaseConfig={
   messagingSenderId:"1036415896248",
   appId:"1:1036415896248:web:a602680fafa74725b1024d"
 };
-const VERSION="4.5";
+const VERSION="4.6";
 const PEN=5;
 const roomLink=()=>location.href.split(/[?#]/)[0]+"?sala="+$("#code").textContent;
 const GRACE=45000;
